@@ -200,7 +200,8 @@ const sectionsData = [
           "https://m.media-amazon.com/images/M/MV5BZjMwNjI4ODAtMDY2Yy00MWEwLTkxMWQtNDIwNjQ1ODlkMTYwXkEyXkFqcGc@._V1_.jpg",
         title: "Save Your Tears",
         artist: "The Weeknd",
-        audio: "http://irdl.rasamusic.ir//%DB%B0%DB%B0/%DB%B3/The%20Weeknd%20-%20Save%20Your%20Tears.mp3",
+        audio:
+          "http://irdl.rasamusic.ir//%DB%B0%DB%B0/%DB%B3/The%20Weeknd%20-%20Save%20Your%20Tears.mp3",
       },
       {
         id: 4,
@@ -208,7 +209,8 @@ const sectionsData = [
           "https://i1.sndcdn.com/artworks-eb0MriwCeIEzf4mo-bUQc2A-t500x500.jpg",
         title: "Save Your Tears",
         artist: "Justin Bieber",
-        audio: "https://dl.dibasmusic.com/dl/1401/09/Justin-Bieber-Peaches-dibamusics.com-320.mp3",
+        audio:
+          "https://dl.dibasmusic.com/dl/1401/09/Justin-Bieber-Peaches-dibamusics.com-320.mp3",
       },
       {
         id: 5,
@@ -216,7 +218,8 @@ const sectionsData = [
           "https://i1.sndcdn.com/artworks-qDFv7RtUQj4oRrIV-R6EZIA-t500x500.jpg",
         title: "Montero",
         artist: "Lil Nas X",
-        audio: "https://dl.melovy.ir/2022/11/Lil-Nas-X-MONTERO-(Call-Me-By-Your-Name)1.mp3",
+        audio:
+          "https://dl.melovy.ir/2022/11/Lil-Nas-X-MONTERO-(Call-Me-By-Your-Name)1.mp3",
       },
       {
         id: 6,
@@ -229,12 +232,10 @@ const sectionsData = [
       },
       {
         id: 7,
-        cover:
-          "https://cdn.europosters.eu/image/1300/116581.jpg",
+        cover: "https://cdn.europosters.eu/image/1300/116581.jpg",
         title: "Bad Habits",
         artist: "Ed Sheeran",
-        audio:
-          "https://files.musicfeed.ir/2021/11/ed_sheeran_bad_habits.mp3",
+        audio: "https://files.musicfeed.ir/2021/11/ed_sheeran_bad_habits.mp3",
       },
       {
         id: 8,
@@ -256,8 +257,7 @@ const sectionsData = [
       },
       {
         id: 10,
-        cover:
-          "https://i1.sndcdn.com/artworks-oIHnpJTjJDYs-0-t500x500.jpg",
+        cover: "https://i1.sndcdn.com/artworks-oIHnpJTjJDYs-0-t500x500.jpg",
         title: "Industry Baby",
         artist: "Lil Nas X & Jack Harlow",
         audio:
@@ -270,25 +270,30 @@ const sectionsData = [
     icons: <BsSoundwave />,
     tracks: [
       {
-        id : 1 ,
+        id: 1,
         cover: "https://i.ebayimg.com/images/g/sI8AAOSwTA9ksbz-/s-l400.jpg",
         title: "Lose Yourself",
         artist: "Eminem",
-        audio: "https://cdn.tiktokmusics.ir/music/Lose%20Yourself%20By%20Eminem.mp3",
+        audio:
+          "https://cdn.tiktokmusics.ir/music/Lose%20Yourself%20By%20Eminem.mp3",
       },
       {
-        id : 2 ,
-        cover: "https://i1.sndcdn.com/artworks-iROhyHgRWzk7JWv1-RYPLkw-t500x500.jpg",
+        id: 2,
+        cover:
+          "https://i1.sndcdn.com/artworks-iROhyHgRWzk7JWv1-RYPLkw-t500x500.jpg",
         title: "Stronger",
         artist: "Kanye West",
-        audio: "https://uploadb.me/5zkgqojkm3th/Kanye%20West%20-%20Stronger.mp3.html",
+        audio:
+          "https://uploadb.me/5zkgqojkm3th/Kanye%20West%20-%20Stronger.mp3.html",
       },
       {
-        id : 3 ,
-        cover: "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/99/b4/7b/99b47bd8-2b22-e1ef-2e60-c5147f27a861/dj.thrvmjqj.jpg/400x400bb.webp",
+        id: 3,
+        cover:
+          "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/99/b4/7b/99b47bd8-2b22-e1ef-2e60-c5147f27a861/dj.thrvmjqj.jpg/400x400bb.webp",
         title: "Titanium",
         artist: "David Guetta ft. Sia",
-        audio: "https://files.musicfeed.ir/2020/03/Titanium-David-Guetta-ft.-Sia-Titanium-musicfeed.ir_.mp3",
+        audio:
+          "https://files.musicfeed.ir/2020/03/Titanium-David-Guetta-ft.-Sia-Titanium-musicfeed.ir_.mp3",
       },
     ],
   },
@@ -530,7 +535,10 @@ export default function SpotifyApp() {
             <div
               key={index}
               onClick={() => {
-                setCurrentTrackIndex(index);
+                const realIndex = currentSection.tracks.findIndex(
+                  (t) => t.id === track.id
+                );
+                setCurrentTrackIndex(realIndex);
                 setIsPlaying(true);
               }}
               className={`group relative flex items-center rounded-lg p-3 cursor-pointer transition-all duration-500 shadow-md transform hover:scale-102 hover:shadow-xl overflow-hidden bg-black/30 ${
