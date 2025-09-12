@@ -1,6 +1,6 @@
 <div>
   <h1>Click on the GitHub icon below to view the project online.</h1>
-  <a href="https://github.com/YourUsername/Spotify-Player">
+  <a href="https://hamiparsa.github.io/Music-Player/">
     <img src="https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white"/>
   </a>
 </div>
@@ -63,15 +63,6 @@ Perfect for practicing React, Next.js, TypeScript, Tailwind CSS, and Zustand in 
 
 <h1 align="center">Project Images : 🖼️</h1>
 <div align="center">
-  <img src="/spotify1.png" width="700px" />
-  <br/><br/>
-  <img src="/spotify2.png" width="700px" />
-  <br/><br/>
-  <img src="/spotify3.png" width="700px" />
+  <img src="/pic1.png" width="700px" />
 </div>
-<hr/>
-<div align="center">
-  <img src="/spotify4.png" width="700px" />
-  <br/><br/>
-  <img src="/spotify5.png" width="700px" />
-</div>
+
