@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* ✅ Slim scrollbar */
+::-webkit-scrollbar {
+  width: 8px; /* scrollbar width */
+}
+
+/* ✅ Transparent track */
+::-webkit-scrollbar-track {
+  background: transparent; /* track background */
+}
+
+/* ✅ Spotify green thumb */
+::-webkit-scrollbar-thumb {
+  background: #22c55e; /* green-500 */
+  border-radius: 9999px; /* fully rounded */
+}
+
+/* ✅ Darker green on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #16a34a; /* green-600 */
+}
+
