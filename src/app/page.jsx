@@ -312,9 +312,18 @@ export default function SpotifyApp() {
   const [volume, setVolume] = useState(0.5); // volume level
   const [menuOpen, setMenuOpen] = useState(false); // mobile menu state
   const audioRef = useRef(null); // reference to audio element
-
   const currentSection = sections[currentSectionIndex];
   const currentTrack = currentSection.tracks[currentTrackIndex];
+  const trackRefs = useRef([]);
+  // Scroll automatically to the current track if it's not visible
+  useEffect(() => {
+    if (trackRefs.current[currentTrackIndex]) {
+      trackRefs.current[currentTrackIndex].scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [currentTrackIndex, currentSectionIndex]);
 
   // Update audio when track changes
   useEffect(() => {
@@ -330,6 +339,24 @@ export default function SpotifyApp() {
     audio.addEventListener("loadedmetadata", updateDuration);
     audio.addEventListener("timeupdate", updateTime);
 
+    // ← Add this for auto-play next track
+    const handleEnded = () => {
+      if (currentTrackIndex + 1 < currentSection.tracks.length) {
+        setCurrentTrackIndex(currentTrackIndex + 1);
+      } else {
+        if (currentSectionIndex + 1 < sections.length) {
+          setCurrentSectionIndex(currentSectionIndex + 1);
+          setCurrentTrackIndex(0);
+        } else {
+          setCurrentSectionIndex(0);
+          setCurrentTrackIndex(0);
+        }
+      }
+      setIsPlaying(true); // automatically play next track
+    };
+
+    audio.addEventListener("ended", handleEnded);
+
     if (isPlaying) {
       audio.play().catch((err) => console.log("Play prevented:", err));
     }
@@ -337,8 +364,9 @@ export default function SpotifyApp() {
     return () => {
       audio.removeEventListener("loadedmetadata", updateDuration);
       audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("ended", handleEnded);
     };
-  }, [currentTrack]);
+  }, [currentTrack, currentSectionIndex]);
 
   // Play/pause toggle
   const togglePlay = async () => {
@@ -534,6 +562,7 @@ export default function SpotifyApp() {
           {filteredTracks.map((track, index) => (
             <div
               key={index}
+              ref={(el) => (trackRefs.current[index] = el)}
               onClick={() => {
                 const realIndex = currentSection.tracks.findIndex(
                   (t) => t.id === track.id
