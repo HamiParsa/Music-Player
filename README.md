@@ -47,17 +47,13 @@ Technologies Used:
     Tailwind CSS for fast and responsive styling
     <img width='20px' src='https://skillicons.dev/icons?i=tailwindcss'>
   </li>
-  <li>
-    Zustand for global state management (current track, playlists, etc.)
-    <img width='20px' src='https://skillicons.dev/icons?i=redux'>
-  </li>
 </ul>
 
 Description:
 
 This project demonstrates a modern web music player using Spotify API. Users can play, pause, skip songs, manage playlists, and control volume. Zustand handles the global state efficiently, making the player reactive and smooth.  
 
-Perfect for practicing React, Next.js, TypeScript, Tailwind CSS, and Zustand in a real-world interactive application.
+Perfect for practicing React, Next.js, TypeScript, Tailwind CSS in a real-world interactive application.
 
 <hr/>
 
