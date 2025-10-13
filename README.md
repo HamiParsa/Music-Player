@@ -82,9 +82,5 @@ Perfect for developers practicing **React**, **Next.js**, **TypeScript**, and **
 ---
 
 <div align="center">
-  <a href="https://hamiparsa.github.io/Music-Player/">
-    <img src="https://img.shields.io/badge/Listen_Now-1DB954?style=for-the-badge&logo=spotify&logoColor=white"/>
-  </a>
-  <br/><br/>
   <img src="https://skillicons.dev/icons?i=react,next,typescript,tailwind,redux" />
 </div>
