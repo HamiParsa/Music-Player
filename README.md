@@ -65,6 +65,7 @@
 
 
 
+
 <div align="center">
   <h1>🎵 Spotify Player Clone</h1>
   <p>Experience the vibe of music — modern, smooth, and interactive 🎧</p>
