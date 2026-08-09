@@ -1,23 +1,75 @@
 @import "tailwindcss";
 
-/* ✅ Slim scrollbar */
+/* ============================================================
+   PREMIUM SCROLLBAR - BLUE THEME
+   ============================================================ */
+
+/* ✅ Slim & modern scrollbar */
 ::-webkit-scrollbar {
-  width: 8px; /* scrollbar width */
+  width: 6px;                /* thin & elegant */
+  height: 6px;               /* for horizontal scroll */
 }
 
-/* ✅ Transparent track */
+/* ✅ Transparent track with subtle background on hover */
 ::-webkit-scrollbar-track {
-  background: transparent; /* track background */
+  background: transparent;
+  border-radius: 9999px;
 }
 
-/* ✅ Spotify green thumb */
+/* ✅ Track becomes visible on hover */
+*:hover::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ✅ Blue gradient thumb with glow effect */
 ::-webkit-scrollbar-thumb {
-  background: #22c55e; /* green-500 */
-  border-radius: 9999px; /* fully rounded */
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: all 0.3s ease;
 }
 
-/* ✅ Darker green on hover */
+/* ✅ Thumb hover - brighter & larger */
 ::-webkit-scrollbar-thumb:hover {
-  background: #16a34a; /* green-600 */
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
 }
 
+/* ✅ Thumb active (clicked) */
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #93c5fd, #60a5fa);
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+}
+
+/* ============================================================
+   FIREFOX SUPPORT
+   ============================================================ */
+
+/* ✅ Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 transparent;
+}
+
+/* ✅ Firefox hover effect */
+*:hover {
+  scrollbar-color: #60a5fa transparent;
+}
+
+/* ============================================================
+   EXTRA: Smooth scrolling for the whole app
+   ============================================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ============================================================
+   OPTIONAL: Scrollbar corner (for when both scrollbars appear)
+   ============================================================ */
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

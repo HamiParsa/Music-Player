@@ -8,15 +8,23 @@ import {
   FaSearch,
   FaUserCircle,
   FaVolumeUp,
+  FaVolumeMute,
   FaBars,
   FaTimes,
   FaSpotify,
+  FaHeart,
+  FaClock,
+  FaRandom,
+  FaRedo,
 } from "react-icons/fa";
 import { LuFolderHeart } from "react-icons/lu";
 import { GoMoveToTop } from "react-icons/go";
 import { BsSoundwave } from "react-icons/bs";
+import { MdLibraryMusic } from "react-icons/md";
 
-// Sample sections data (each section has tracks with cover, title, artist, audio)
+// ============================================================
+// DATA
+// ============================================================
 const sectionsData = [
   {
     name: "My Favorites",
@@ -169,7 +177,7 @@ const sectionsData = [
         title: "Guilty as Sin",
         artist: "Taylor Swift",
         audio:
-          "https://s31.uupload.ir/files/foxlyrics/mp3/2024-4/09%20Guilty%20as%20Sin%20-%20Taylor%20Swift%20(320).mp3",
+          "https://s31.uupload.ir/files/foxlyrics/mp4/2024-4/09%20Guilty%20as%20Sin%20-%20Taylor%20Swift%20(320).mp3",
       },
     ],
   },
@@ -297,25 +305,34 @@ const sectionsData = [
       },
     ],
   },
-  // More sections...
 ];
 
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 export default function SpotifyApp() {
-  // State management
-  const [sections] = useState(sectionsData); // all sections
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // current selected section
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0); // current selected track
-  const [isPlaying, setIsPlaying] = useState(false); // play/pause state
-  const [search, setSearch] = useState(""); // search query
-  const [currentTime, setCurrentTime] = useState(0); // current playback time
-  const [duration, setDuration] = useState(0); // track duration
-  const [volume, setVolume] = useState(0.5); // volume level
-  const [menuOpen, setMenuOpen] = useState(false); // mobile menu state
-  const audioRef = useRef(null); // reference to audio element
+  const [sections] = useState(sectionsData);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [search, setSearch] = useState("");
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.5);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [isRepeating, setIsRepeating] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const audioRef = useRef(null);
+  const trackRefs = useRef([]);
+
   const currentSection = sections[currentSectionIndex];
   const currentTrack = currentSection.tracks[currentTrackIndex];
-  const trackRefs = useRef([]);
-  // Scroll automatically to the current track if it's not visible
+
   useEffect(() => {
     if (trackRefs.current[currentTrackIndex]) {
       trackRefs.current[currentTrackIndex].scrollIntoView({
@@ -325,13 +342,13 @@ export default function SpotifyApp() {
     }
   }, [currentTrackIndex, currentSectionIndex]);
 
-  // Update audio when track changes
+  // ===== Audio setup with retry logic =====
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     audio.src = currentTrack.audio;
-    audio.volume = volume;
+    audio.volume = isMuted ? 0 : volume;
 
     const updateDuration = () => setDuration(audio.duration);
     const updateTime = () => setCurrentTime(audio.currentTime);
@@ -339,36 +356,62 @@ export default function SpotifyApp() {
     audio.addEventListener("loadedmetadata", updateDuration);
     audio.addEventListener("timeupdate", updateTime);
 
-    // ← Add this for auto-play next track
+    const handleCanPlay = () => {
+      setIsLoading(false);
+      if (isPlaying) {
+        audio.play().catch((err) => {
+          console.log("Play failed:", err);
+          setIsLoading(false);
+        });
+      }
+    };
+
+    const handleError = () => {
+      setIsLoading(false);
+      // If track fails, retry up to 3 times
+      if (retryCount < 3) {
+        setRetryCount(retryCount + 1);
+        setTimeout(() => {
+          audio.load();
+        }, 500);
+      } else {
+        setRetryCount(0);
+        setIsPlaying(false);
+      }
+    };
+
     const handleEnded = () => {
       if (currentTrackIndex + 1 < currentSection.tracks.length) {
         setCurrentTrackIndex(currentTrackIndex + 1);
+      } else if (currentSectionIndex + 1 < sections.length) {
+        setCurrentSectionIndex(currentSectionIndex + 1);
+        setCurrentTrackIndex(0);
       } else {
-        if (currentSectionIndex + 1 < sections.length) {
-          setCurrentSectionIndex(currentSectionIndex + 1);
-          setCurrentTrackIndex(0);
-        } else {
-          setCurrentSectionIndex(0);
-          setCurrentTrackIndex(0);
-        }
+        setCurrentSectionIndex(0);
+        setCurrentTrackIndex(0);
       }
-      setIsPlaying(true); // automatically play next track
+      setIsPlaying(true);
     };
 
+    audio.addEventListener("canplay", handleCanPlay);
+    audio.addEventListener("error", handleError);
     audio.addEventListener("ended", handleEnded);
 
     if (isPlaying) {
-      audio.play().catch((err) => console.log("Play prevented:", err));
+      setIsLoading(true);
+      audio.load();
     }
 
     return () => {
       audio.removeEventListener("loadedmetadata", updateDuration);
       audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("error", handleError);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [currentTrack, currentSectionIndex]);
+  }, [currentTrack, currentSectionIndex, retryCount]);
 
-  // Play/pause toggle
+  // ===== Toggle Play with retry =====
   const togglePlay = async () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -376,33 +419,71 @@ export default function SpotifyApp() {
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
+      setRetryCount(0);
     } else {
+      setIsLoading(true);
+      setRetryCount(0);
+      
       try {
-        if (audio.paused) {
-          await audio.play();
-          setIsPlaying(true);
+        // Force reload if audio is stalled
+        if (audio.readyState < 2) {
+          audio.load();
         }
+        
+        await audio.play();
+        setIsPlaying(true);
+        setIsLoading(false);
       } catch (err) {
         console.log("Play prevented:", err);
+        // Retry after a short delay
+        setTimeout(() => {
+          audio.load();
+          audio.play()
+            .then(() => {
+              setIsPlaying(true);
+              setIsLoading(false);
+            })
+            .catch((retryErr) => {
+              console.log("Retry failed:", retryErr);
+              setIsPlaying(false);
+              setIsLoading(false);
+            });
+        }, 300);
       }
     }
   };
 
-  // Next track
+  // ===== Next Track =====
   const nextTrack = async () => {
     setCurrentTrackIndex((prev) => (prev + 1) % currentSection.tracks.length);
     const audio = audioRef.current;
     if (audio) {
+      setIsLoading(true);
+      setRetryCount(0);
       try {
+        audio.load();
         await audio.play();
         setIsPlaying(true);
+        setIsLoading(false);
       } catch (e) {
         console.log(e);
+        setTimeout(() => {
+          audio.load();
+          audio.play()
+            .then(() => {
+              setIsPlaying(true);
+              setIsLoading(false);
+            })
+            .catch(() => {
+              setIsPlaying(false);
+              setIsLoading(false);
+            });
+        }, 300);
       }
     }
   };
 
-  // Previous track
+  // ===== Previous Track =====
   const prevTrack = async () => {
     setCurrentTrackIndex(
       (prev) =>
@@ -410,268 +491,566 @@ export default function SpotifyApp() {
     );
     const audio = audioRef.current;
     if (audio) {
+      setIsLoading(true);
+      setRetryCount(0);
       try {
+        audio.load();
         await audio.play();
         setIsPlaying(true);
+        setIsLoading(false);
       } catch (e) {
         console.log(e);
+        setTimeout(() => {
+          audio.load();
+          audio.play()
+            .then(() => {
+              setIsPlaying(true);
+              setIsLoading(false);
+            })
+            .catch(() => {
+              setIsPlaying(false);
+              setIsLoading(false);
+            });
+        }, 300);
       }
     }
   };
 
-  // Seek track
   const handleSeek = (e) => {
     const t = Number(e.target.value);
     if (audioRef.current) audioRef.current.currentTime = t;
     setCurrentTime(t);
   };
 
-  // Handle volume change
   const handleVolume = (e) => {
     const v = Number(e.target.value);
     setVolume(v);
-    if (audioRef.current) audioRef.current.volume = v;
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : v;
+    }
+    if (isMuted) setIsMuted(false);
   };
 
-  // Select section
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? volume : 0;
+    }
+  };
+
   const selectSection = (index) => {
     setCurrentSectionIndex(index);
     setCurrentTrackIndex(0);
     setIsPlaying(false);
+    setIsLoading(false);
+    setRetryCount(0);
     setSearch("");
   };
 
-  // Filter tracks by search
   const filteredTracks = currentSection.tracks.filter(
     (track) =>
       track.title.toLowerCase().includes(search.toLowerCase()) ||
       track.artist.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Format time mm:ss
   const formatTime = (time) => {
     const m = Math.floor(time / 60);
     const s = Math.floor(time % 60);
     return `${m}:${("0" + s).slice(-2)}`;
   };
 
+  // ============================================================
+  // RENDER
+  // ============================================================
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-[#0f0f0f] to-[#181818] text-white relative">
-      {/* Hidden audio element */}
+    <div className="h-screen bg-black text-white overflow-hidden">
       <audio ref={audioRef} />
 
-      {/* Navbar */}
-      <nav className="w-full bg-black/60 backdrop-blur-md flex items-center justify-between px-4 py-3 shadow-xl fixed top-0 z-30">
-        <div className="flex items-center space-x-2">
-          <div className="text-2xl flex font-extrabold cursor-pointer hover:text-green-500 transition-all">
-            Spotify <FaSpotify className="mt-2 ml-1" />
+      {/* ========== NAVBAR ========== */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/5">
+        <div className="px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              className="lg:hidden text-white/60 hover:text-white transition-colors"
+              onClick={() => setMenuOpen(true)}
+            >
+              <FaBars size={22} />
+            </button>
+            <div className="flex items-center gap-2.5 cursor-pointer group">
+              <FaSpotify className="text-blue-500 text-3xl group-hover:scale-105 transition-transform" />
+              <span className="text-xl font-bold text-white hidden sm:block">
+                Spotify
+              </span>
+            </div>
           </div>
-          <button
-            className="md:hidden text-2xl"
-            onClick={() => setMenuOpen(true)}
-          >
-            <FaBars />
-          </button>
+
+          <div className="hidden md:block flex-1 max-w-md mx-8">
+            <div className="relative group">
+              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-blue-500 transition-colors text-sm" />
+              <input
+                type="text"
+                placeholder="Search for songs, artists..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-white/5 border border-white/5 rounded-full py-2 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button className="hidden sm:block text-sm font-medium text-white/50 hover:text-white transition-colors">
+              Sign Up
+            </button>
+            <button className="hidden sm:block px-5 py-1.5 text-sm font-bold bg-white text-black rounded-full hover:scale-105 transition-transform shadow-lg shadow-white/10">
+              Log In
+            </button>
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-colors">
+              <FaUserCircle className="text-white/70 text-xl" />
+            </div>
+          </div>
         </div>
 
-        {/* Search (Desktop) */}
-        <div className="flex-1 mx-2 relative hidden md:block">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-full bg-black/40 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
-          />
-          <FaSearch className="absolute left-3 top-2.5 text-gray-300" />
-        </div>
-
-        {/* User/Upgrade (Desktop) */}
-        <div className="hidden md:flex items-center space-x-4">
-          <button className="px-4 py-2 bg-green-500 text-white font-semibold rounded-full hover:bg-green-600 transition-all">
-            Upgrade
-          </button>
-          <FaUserCircle className="text-3xl cursor-pointer hover:text-green-500 transition-all" />
+        <div className="md:hidden px-4 pb-3">
+          <div className="relative">
+            <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 text-sm" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-white/5 border border-white/5 rounded-full py-2 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+          </div>
         </div>
       </nav>
 
-      {/* Search (Mobile) */}
-      <div className="md:hidden px-4 pt-16 bg-black/70 backdrop-blur-md">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-full bg-black/40 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
-          />
-          <FaSearch className="absolute left-3 top-2.5 text-gray-300" />
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
+      {/* ========== MOBILE MENU ========== */}
       {menuOpen && (
-        <div className="fixed inset-0 bg-black/80 z-40 flex">
-          <div className="w-64 bg-black/70 backdrop-blur-md p-6 flex flex-col text-gray-400 relative">
-            <button
-              className="absolute top-3 right-3 text-2xl text-gray-300 hover:text-green-500"
-              onClick={() => setMenuOpen(false)}
-            >
-              <FaTimes />
-            </button>
-            {sections.map((section, i) => (
-              <div
-                key={i}
-                className={`cursor-pointer hover:text-green-500 transition-all duration-300 my-2 ${
-                  currentSectionIndex === i
-                    ? "text-green-400 font-semibold"
-                    : ""
-                }`}
-                onClick={() => {
-                  selectSection(i);
-                  setMenuOpen(false);
-                }}
-              >
-                {section.name}
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="absolute left-0 top-0 bottom-0 w-72 bg-black border-r border-white/5 p-6">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-2">
+                <FaSpotify className="text-blue-500 text-2xl" />
+                <span className="text-xl font-bold">Spotify</span>
               </div>
-            ))}
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="text-white/50 hover:text-white transition-colors"
+              >
+                <FaTimes size={22} />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              {sections.map((section, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    selectSection(i);
+                    setMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3 ${
+                    currentSectionIndex === i
+                      ? "bg-white/10 text-white border border-white/5"
+                      : "text-white/50 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <span className="text-lg">{section.icons}</span>
+                  <span className="font-medium">{section.name}</span>
+                  {currentSectionIndex === i && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex-1" onClick={() => setMenuOpen(false)}></div>
         </div>
       )}
 
-      <div className="flex flex-1 pt-16 overflow-hidden">
-        {/* Sidebar (Desktop) */}
-        <div className="w-64 bg-black/50 backdrop-blur-md p-6 flex-col text-gray-400 hidden md:flex">
-          {sections.map((section, i) => (
-            <div
-              key={i}
-              className={`cursor-pointer flex hover:text-green-500 transition-all duration-300 mb-3 ${
-                currentSectionIndex === i ? "text-green-400 font-semibold" : ""
-              }`}
-              onClick={() => selectSection(i)}
-            >
-              {section.name}
-              <div className="mt-1 ml-1">{section.icons}</div>
-            </div>
-          ))}
-        </div>
+      {/* ========== MAIN CONTENT ========== */}
+      <div className="flex h-full pt-16">
+        <aside className="hidden lg:block w-60 bg-black/50 backdrop-blur-sm border-r border-white/5 p-4 overflow-y-auto">
+          <div className="space-y-1">
+            {sections.map((section, i) => (
+              <button
+                key={i}
+                onClick={() => selectSection(i)}
+                className={`w-full text-left px-4 py-2.5 rounded-xl transition-all flex items-center gap-3 group ${
+                  currentSectionIndex === i
+                    ? "bg-white/10 text-white"
+                    : "text-white/40 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span className="text-lg group-hover:scale-110 transition-transform">
+                  {section.icons}
+                </span>
+                <span className="font-medium text-sm">{section.name}</span>
+                {currentSectionIndex === i && (
+                  <span className="ml-auto w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                )}
+              </button>
+            ))}
+          </div>
 
-        {/* Track List */}
-        <div className="flex-1 overflow-y-auto p-6 pb-40 space-y-3 bg-black/20 backdrop-blur-md relative">
-          {filteredTracks.map((track, index) => (
-            <div
-              key={index}
-              ref={(el) => (trackRefs.current[index] = el)}
-              onClick={() => {
-                const realIndex = currentSection.tracks.findIndex(
-                  (t) => t.id === track.id
-                );
-                setCurrentTrackIndex(realIndex);
-                setIsPlaying(true);
-              }}
-              className={`group relative flex items-center rounded-lg p-3 cursor-pointer transition-all duration-500 shadow-md transform hover:scale-102 hover:shadow-xl overflow-hidden bg-black/30 ${
-                currentTrackIndex === index ? "border-l-4 border-green-500" : ""
-              }`}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-green-400 to-green-500 blur-2xl opacity-0 group-hover:opacity-60 animate-pulse-slow rounded-lg transition-all duration-700"></div>
-              <div className="relative z-10 flex-shrink-0">
-                <img
-                  src={track.cover}
-                  alt={track.title}
-                  className="w-14 h-14 rounded-md shadow-lg transition-all duration-500 group-hover:animate-pulse"
-                />
-                <div className="absolute inset-0 rounded-md ring-2 ring-green-400/50 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-              </div>
-              <div className="ml-3 flex-1 relative z-10">
-                <p className="text-white font-semibold text-md truncate group-hover:text-green-400 transition-all">
-                  {track.id} - {track.title}
-                </p>
-                <p className="text-gray-400 text-sm truncate group-hover:text-green-300 transition-all">
+          <div className="mt-8 pt-8 border-t border-white/5">
+            <div className="flex items-center gap-3 text-white/20 text-xs px-4">
+              <MdLibraryMusic className="text-blue-500/30" />
+              <span>{currentSection.tracks.length} songs</span>
+            </div>
+          </div>
+        </aside>
+
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 pb-44">
+          <div className="mb-8 flex items-end gap-5">
+            <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center text-4xl backdrop-blur-sm border border-white/5 shadow-2xl">
+              {currentSection.icons}
+            </div>
+            <div>
+              <p className="text-white/30 mt-10 text-xs font-medium uppercase tracking-[0.2em]">
+                Playlist
+              </p>
+              <h2 className="text-4xl font-bold text-white">
+                {currentSection.name}
+              </h2>
+              <p className="text-white/20 text-sm mt-1">
+                {filteredTracks.length} songs
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-12 gap-4 px-4 py-2 text-white/20 text-xs uppercase tracking-wider border-b border-white/5 mb-2">
+            <div className="col-span-1">#</div>
+            <div className="col-span-7 sm:col-span-5">Title</div>
+            <div className="hidden sm:block col-span-4">Artist</div>
+            <div className="col-span-4 sm:col-span-2 text-right">
+              <FaClock className="inline" />
+            </div>
+          </div>
+
+          {filteredTracks.map((track, index) => {
+            const realIndex = currentSection.tracks.findIndex(
+              (t) => t.id === track.id
+            );
+            const isActive = currentTrackIndex === realIndex;
+
+            return (
+              <div
+                key={index}
+                ref={(el) => (trackRefs.current[realIndex] = el)}
+                onClick={() => {
+                  setCurrentTrackIndex(realIndex);
+                  setIsPlaying(true);
+                  setIsLoading(true);
+                  setRetryCount(0);
+                  const audio = audioRef.current;
+                  if (audio) {
+                    audio.load();
+                    audio.play()
+                      .then(() => {
+                        setIsPlaying(true);
+                        setIsLoading(false);
+                      })
+                      .catch(() => {
+                        setTimeout(() => {
+                          audio.load();
+                          audio.play()
+                            .then(() => {
+                              setIsPlaying(true);
+                              setIsLoading(false);
+                            })
+                            .catch(() => {
+                              setIsPlaying(false);
+                              setIsLoading(false);
+                            });
+                        }, 300);
+                      });
+                  }
+                }}
+                className={`group grid grid-cols-12 gap-4 items-center px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
+                  isActive ? "bg-white/10" : "hover:bg-white/5"
+                }`}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="col-span-1 text-white/30 text-sm group-hover:text-white transition-colors">
+                  {isActive && isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                    </div>
+                  ) : isActive && isPlaying ? (
+                    <div className="flex items-center justify-center gap-0.5">
+                      <div className="w-0.5 h-2 bg-blue-500 animate-[bounce_0.8s_infinite_100ms]" />
+                      <div className="w-0.5 h-3.5 bg-blue-500 animate-[bounce_0.8s_infinite_200ms]" />
+                      <div className="w-0.5 h-2.5 bg-blue-500 animate-[bounce_0.8s_infinite_300ms]" />
+                      <div className="w-0.5 h-4 bg-blue-500 animate-[bounce_0.8s_infinite_400ms]" />
+                    </div>
+                  ) : isActive ? (
+                    <FaPlay className="text-blue-500" size={14} />
+                  ) : (
+                    <span className="group-hover:hidden">{index + 1}</span>
+                  )}
+                  {!isActive && (
+                    <FaPlay
+                      className="hidden group-hover:block text-white/60"
+                      size={14}
+                    />
+                  )}
+                </div>
+
+                <div className="col-span-7 sm:col-span-5 flex items-center gap-3 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={track.cover}
+                      alt=""
+                      className="w-10 h-10 rounded-lg object-cover"
+                      loading="lazy"
+                    />
+                    {isActive && isPlaying && (
+                      <div className="absolute inset-0 rounded-lg bg-blue-500/20 animate-pulse" />
+                    )}
+                    {isActive && isLoading && (
+                      <div className="absolute inset-0 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <div className="w-3 h-3 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p
+                      className={`truncate text-sm font-medium ${
+                        isActive ? "text-blue-500" : "text-white"
+                      }`}
+                    >
+                      {track.title}
+                    </p>
+                    <p className="sm:hidden text-white/30 text-xs truncate">
+                      {track.artist}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="hidden sm:block col-span-4 text-white/40 truncate text-sm group-hover:text-white/60 transition-colors">
                   {track.artist}
-                </p>
+                </div>
+
+                <div className="col-span-4 sm:col-span-2 flex items-center justify-end gap-3 text-white/20">
+                  <FaHeart
+                    className={`transition-all cursor-pointer ${
+                      isLiked
+                        ? "text-blue-500"
+                        : "opacity-0 group-hover:opacity-100 hover:text-blue-500"
+                    }`}
+                    size={15}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLiked(!isLiked);
+                    }}
+                  />
+                  <span className="text-xs font-mono">3:45</span>
+                </div>
               </div>
-              <div className="ml-3 opacity-0 group-hover:opacity-100 transition-all duration-300 relative z-10">
-                <FaPlay className="text-green-500 text-xl hover:scale-110 transition-transform duration-200" />
-              </div>
+            );
+          })}
+
+          {filteredTracks.length === 0 && (
+            <div className="text-center py-20">
+              <div className="text-5xl mb-4 opacity-20">🎵</div>
+              <p className="text-white/30 text-lg">No results found</p>
+              <p className="text-white/10 text-sm">Try adjusting your search</p>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Player (Fixed at bottom) */}
-      <div className="h-32  md:h-28 gap-x-6 bg-black/50 backdrop-blur-xl flex flex-col md:flex-row justify-center items-center px-6 shadow-inner space-y-3 md:space-y-0 border-t border-green-500/50 fixed bottom-0 w-full z-20">
-        {/* Track info */}
-        <div className="flex items-center space-x-4">
-          <img
-            src={currentTrack.cover}
-            alt={currentTrack.title}
-            className={`w-16 h-16 md:w-20 md:h-20 rounded-lg shadow-xl ${
-              isPlaying ? "animate-pulse" : ""
-            }`}
-          />
-          <div>
-            <p className="text-white font-bold">{currentTrack.title}</p>
-            <p className="text-gray-400 text-sm">{currentTrack.artist}</p>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center space-x-6 text-2xl md:text-3xl">
-          <FaStepBackward
-            className="text-white hover:text-green-500 cursor-pointer transition-all"
-            onClick={prevTrack}
-          />
-          {isPlaying ? (
-            <FaPause
-              className="text-white hover:text-green-500 cursor-pointer transition-all"
-              onClick={togglePlay}
-            />
-          ) : (
-            <FaPlay
-              className="text-white hover:text-green-500 cursor-pointer transition-all"
-              onClick={togglePlay}
-            />
           )}
-          <FaStepForward
-            className="text-white hover:text-green-500 cursor-pointer transition-all"
-            onClick={nextTrack}
-          />
-        </div>
+        </main>
+      </div>
 
-        {/* Time + Volume */}
-        <div className="flex flex-col md:flex-row items-center md:space-x-6 w-full md:w-auto space-y-2 md:space-y-0 mt-2 md:mt-0">
-          {/* Seek bar */}
-          <div className="flex flex-col w-full md:w-64">
-            <input
-              type="range"
-              min={0}
-              max={duration || 0}
-              value={currentTime}
-              onChange={handleSeek}
-              className="w-full h-2 rounded-lg bg-gray-700 accent-green-500 transition-all"
-            />
-            <div className="flex justify-between text-xs text-gray-400 mt-1 font-mono">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
+      {/* ============================================================
+          PREMIUM PLAYER - BLUE THEME
+          ============================================================ */}
+      <footer className="fixed bottom-0 left-0 right-0 z-40">
+        <div className="relative bg-black/80 backdrop-blur-2xl border-t border-white/10 shadow-2xl shadow-black/50">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+
+          <div className="px-3 sm:px-6 py-3">
+            <div className="flex items-center justify-between max-w-7xl mx-auto gap-2 sm:gap-4">
+              {/* LEFT: Track Info */}
+              <div className="flex items-center gap-3 min-w-[140px] sm:min-w-[200px]">
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-br from-blue-500/20 to-transparent rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <img
+                    src={currentTrack.cover}
+                    alt=""
+                    className="relative w-11 h-11 sm:w-14 sm:h-14 rounded-lg object-cover shadow-lg group-hover:scale-105 transition-transform duration-300"
+                  />
+                  {isLoading && (
+                    <div className="absolute inset-0 rounded-lg bg-black/50 flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {isPlaying && !isLoading && (
+                    <>
+                      <div className="absolute inset-0 rounded-lg ring-2 ring-blue-500/40 animate-pulse" />
+                      <div className="absolute -inset-1 rounded-lg bg-blue-500/10 blur-xl animate-pulse" />
+                    </>
+                  )}
+                </div>
+
+                <div className="hidden sm:block min-w-0">
+                  <p className="text-sm font-medium text-white truncate max-w-[120px] hover:text-blue-500 transition-colors cursor-pointer">
+                    {currentTrack.title}
+                  </p>
+                  <p className="text-xs text-white/40 truncate max-w-[120px] hover:text-white/60 transition-colors cursor-pointer">
+                    {currentTrack.artist}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setIsLiked(!isLiked)}
+                  className="text-white/30 hover:text-blue-500 transition-all hover:scale-110"
+                >
+                  <FaHeart
+                    size={16}
+                    className={`transition-all ${
+                      isLiked ? "text-blue-500 fill-blue-500" : ""
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* CENTER: Controls */}
+              <div className="flex-1 max-w-[500px] flex flex-col items-center gap-1.5">
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <button
+                    onClick={() => setIsShuffling(!isShuffling)}
+                    className={`p-1.5 rounded-full transition-all hover:scale-110 ${
+                      isShuffling
+                        ? "text-blue-500 bg-blue-500/10"
+                        : "text-white/30 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <FaRandom size={14} />
+                  </button>
+
+                  <button
+                    onClick={prevTrack}
+                    className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5 transition-all hover:scale-110"
+                  >
+                    <FaStepBackward size={16} />
+                  </button>
+
+                  <div className="relative">
+                    <div
+                      className={`absolute inset-0 rounded-full bg-blue-500/20 blur-xl transition-opacity duration-500 ${
+                        isPlaying ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    <button
+                      onClick={togglePlay}
+                      disabled={isLoading}
+                      className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 text-black flex items-center justify-center transition-all shadow-lg shadow-blue-500/20 ${
+                        isLoading
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:scale-105 hover:shadow-blue-500/40"
+                      }`}
+                    >
+                      {isLoading ? (
+                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                      ) : isPlaying ? (
+                        <FaPause size={16} />
+                      ) : (
+                        <FaPlay size={16} className="ml-0.5" />
+                      )}
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={nextTrack}
+                    className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5 transition-all hover:scale-110"
+                  >
+                    <FaStepForward size={16} />
+                  </button>
+
+                  <button
+                    onClick={() => setIsRepeating(!isRepeating)}
+                    className={`p-1.5 rounded-full transition-all hover:scale-110 ${
+                      isRepeating
+                        ? "text-blue-500 bg-blue-500/10"
+                        : "text-white/30 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <FaRedo size={14} />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-3 w-full">
+                  <span className="text-white/20 text-[10px] font-mono min-w-[28px] text-right">
+                    {formatTime(currentTime)}
+                  </span>
+
+                  <div className="flex-1 relative group">
+                    <input
+                      type="range"
+                      min={0}
+                      max={duration || 0}
+                      value={currentTime}
+                      onChange={handleSeek}
+                      className="w-full h-1 rounded-full bg-white/10 accent-blue-500 cursor-pointer transition-all group-hover:h-1.5"
+                      style={{
+                        background: `linear-gradient(to right, #3b82f6 ${
+                          duration ? (currentTime / duration) * 100 : 0
+                        }%, rgba(255,255,255,0.1) ${
+                          duration ? (currentTime / duration) * 100 : 0
+                        }%)`,
+                      }}
+                    />
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/90 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      {formatTime(currentTime)}
+                    </div>
+                  </div>
+
+                  <span className="text-white/20 text-[10px] font-mono min-w-[28px]">
+                    {formatTime(duration)}
+                  </span>
+                </div>
+              </div>
+
+              {/* RIGHT: Volume */}
+              <div className="hidden md:flex items-center gap-2 min-w-[120px] justify-end">
+                <button
+                  onClick={toggleMute}
+                  className="text-white/30 hover:text-white transition-colors hover:scale-110"
+                >
+                  {isMuted || volume === 0 ? (
+                    <FaVolumeMute size={16} />
+                  ) : (
+                    <FaVolumeUp size={16} />
+                  )}
+                </button>
+
+                <div className="relative group w-20">
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolume}
+                    className="w-full h-1 rounded-full bg-white/10 accent-blue-500 cursor-pointer transition-all group-hover:h-1.5"
+                    style={{
+                      background: `linear-gradient(to right, #3b82f6 ${
+                        (isMuted ? 0 : volume) * 100
+                      }%, rgba(255,255,255,0.1) ${
+                        (isMuted ? 0 : volume) * 100
+                      }%)`,
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Volume control */}
-          <div className="flex items-center space-x-2 w-full md:w-36">
-            <FaVolumeUp className="text-gray-400" />
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={handleVolume}
-              className="w-full h-2 rounded-full bg-[#F2F2F2]  accent-[#B4E50D] appearance-none cursor-pointer transition-all"
-            />
-          </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
