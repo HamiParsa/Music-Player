@@ -401,7 +401,7 @@ Perfect for developers practicing **React**, **Next.js**, **TypeScript**, and **
 ## 👨‍💻 Author
 
 **Developed by:** [Hami Parsa](https://github.com/hamiparsa)  
-💬 Front-End Developer | Passionate about music, motion, and modern design  
+💬 Full-Stack Developer | Passionate about music, motion, and modern design  
 
 ---
 
